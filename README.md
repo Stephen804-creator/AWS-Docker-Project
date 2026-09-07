@@ -32,11 +32,10 @@ The Docker image is available on Docker Hub as:
 stephen804/nodejs-app:1.0
 
 ##Deployment Evidence
-Docker Build
-![Docker-Build](screenshot/docker-build.jpg)
-Docker Hub Image
-![Docker-Hub](screenshot/docker-hub.jpg)
-Running Docker Container
-![Docker-Container](screenshot/docker-container.jpg)
-Live Application
-![Live Application](screenshot/live-application.jpg)
+![Docker Build Screenshot](docker-build.jpg)
+
+![Docker Hub Screenshot](docker-hub.jpg)
+
+![Docker Container Screenshot](docker-container.jpg)
+
+![Live Application Screenshot](live-application.jpg)
