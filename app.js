@@ -121,8 +121,8 @@ function createServer() {
 <body>
   <main>
     <h1>Node.js Docker Application</h1>
-    <p>Application deployed successfully.</p>
-    <p>This application is running inside a Docker container on an AWS Linux server.</p>
+    <p>The HTTP service is responding.</p>
+    <p>This Node.js application is packaged with Docker and can run on a local host or cloud server.</p>
     <div class="status">Application is running</div>
   </main>
 </body>
