@@ -1,17 +1,23 @@
 {
   "name": "nodejs-docker-app",
-  "version": "1.0.0",
-  "description": "A simple Node.js application deployed with Docker on AWS EC2.",
+  "version": "1.1.0",
+  "description": "A small Node.js HTTP application containerized with Docker and deployed on AWS EC2.",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "test": "node --test",
+    "check": "node --check app.js && node --check test/app.test.js"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "keywords": [
     "nodejs",
     "docker",
     "aws",
-    "deployment"
+    "ec2",
+    "container"
   ],
-  "author": "",
+  "author": "Stephen804-creator",
   "license": "MIT"
 }
