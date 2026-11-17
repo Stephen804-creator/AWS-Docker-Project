@@ -1,20 +1,92 @@
-const http = require("http");
+"use strict";
 
-const PORT = process.env.PORT || 3000;
+const http = require("node:http");
 
-const server = http.createServer((req, res) => {
-  res.writeHead(200, {
-    "Content-Type": "text/html; charset=utf-8"
+const DEFAULT_PORT = 3000;
+
+const SECURITY_HEADERS = {
+  "Cache-Control": "no-store",
+  "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  "Cross-Origin-Resource-Policy": "same-origin",
+  "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+  "Referrer-Policy": "no-referrer",
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY"
+};
+
+function getPort(value = process.env.PORT) {
+  const port = value === undefined || value === "" ? DEFAULT_PORT : Number(value);
+
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error("PORT must be an integer between 1 and 65535.");
+  }
+
+  return port;
+}
+
+function send(res, statusCode, contentType, body, method, extraHeaders = {}) {
+  res.writeHead(statusCode, {
+    ...SECURITY_HEADERS,
+    "Content-Type": contentType,
+    ...extraHeaders
   });
 
-  res.end(`<!DOCTYPE html>
+  if (method === "HEAD") {
+    res.end();
+    return;
+  }
+
+  res.end(body);
+}
+
+function createServer() {
+  return http.createServer((req, res) => {
+    let pathname;
+
+    try {
+      pathname = new URL(req.url, "http://localhost").pathname;
+    } catch {
+      send(res, 400, "text/plain; charset=utf-8", "Bad Request\n", req.method);
+      return;
+    }
+
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      send(
+        res,
+        405,
+        "text/plain; charset=utf-8",
+        "Method Not Allowed\n",
+        req.method,
+        { Allow: "GET, HEAD" }
+      );
+      return;
+    }
+
+    if (pathname === "/health") {
+      send(
+        res,
+        200,
+        "application/json; charset=utf-8",
+        JSON.stringify({ status: "ok" }),
+        req.method
+      );
+      return;
+    }
+
+    if (pathname !== "/") {
+      send(res, 404, "text/plain; charset=utf-8", "Not Found\n", req.method);
+      return;
+    }
+
+    const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
   <title>Node.js Docker App</title>
-
   <style>
+    * { box-sizing: border-box; }
     body {
       font-family: Arial, sans-serif;
       background: #f4f4f4;
@@ -23,27 +95,18 @@ const server = http.createServer((req, res) => {
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 20px;
     }
-
-    .container {
-      background: white;
-      max-width: 650px;
-      margin: 20px;
-      padding: 40px;
+    main {
+      width: min(100%, 650px);
+      background: #fff;
+      padding: clamp(24px, 5vw, 40px);
       text-align: center;
       border-radius: 12px;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
     }
-
-    h1 {
-      margin-bottom: 15px;
-    }
-
-    p {
-      color: #555;
-      line-height: 1.6;
-    }
-
+    h1 { margin: 0 0 15px; }
+    p { color: #555; line-height: 1.6; }
     .status {
       display: inline-block;
       margin-top: 15px;
@@ -55,28 +118,46 @@ const server = http.createServer((req, res) => {
     }
   </style>
 </head>
-
 <body>
-  <main class="container">
+  <main>
     <h1>Node.js Docker Application</h1>
-
     <p>Application deployed successfully.</p>
-
-    <p>
-      This application is running inside a Docker container
-      on an AWS Linux server.
-    </p>
-
-    <p>Server port: ${PORT}</p>
-
-    <div class="status">
-      Application is running
-    </div>
+    <p>This application is running inside a Docker container on an AWS Linux server.</p>
+    <div class="status">Application is running</div>
   </main>
 </body>
-</html>`);
-});
+</html>`;
 
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
-});
+    send(res, 200, "text/html; charset=utf-8", html, req.method);
+  });
+}
+
+function startServer() {
+  const port = getPort();
+  const server = createServer();
+
+  server.listen(port, "0.0.0.0", () => {
+    console.log(`Server listening on 0.0.0.0:${port}`);
+  });
+
+  const shutdown = (signal) => {
+    console.log(`${signal} received; shutting down HTTP server.`);
+    server.close((error) => {
+      if (error) {
+        console.error("Graceful shutdown failed:", error.message);
+        process.exitCode = 1;
+      }
+    });
+  };
+
+  process.once("SIGTERM", () => shutdown("SIGTERM"));
+  process.once("SIGINT", () => shutdown("SIGINT"));
+
+  return server;
+}
+
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = { createServer, getPort, startServer };
